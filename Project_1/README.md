@@ -1,0 +1,1 @@
+# This folder consists of all the files relating to Project 1: Developing a topological traversal algorithm to perform Static Timing Analysis for circuits
