@@ -2,4 +2,3 @@
 ASU EEE 598 Design Automation Class of 2024 for Professor Vidya Chhabria
 ## All projects listed in here <br />
 Project 1: Topology Traversal Algorithm for Performing STA on Circuits
-
