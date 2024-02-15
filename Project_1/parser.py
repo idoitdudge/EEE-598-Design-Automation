@@ -50,7 +50,6 @@ if args.read_ckt:
         elif ('gates' in line): # parse total gates line
             gate_type = re.search('(.*?) \(\s*(.*?)\)', line, flags=re.DOTALL).group(2)
             total_gates.append(gate_type.split(' + '))
-            total_gates = [[s.rstrip('s') for s in sublist] for sublist in total_gates]
 
         if (line.startswith ("INPUT")): # parse input gates
             gate_name = re.search('INPUT\((.*?)\)', line, flags=re.DOTALL).group(1)
@@ -112,7 +111,7 @@ if args.read_ckt:
         ckt_detail.write(input_num + " primary inputs\n")
         ckt_detail.write(output_num + " primary outputs\n")
         for i in total_gates:
-            ckt_detail.write(', '.join(i) + " gates\n")
+            ckt_detail.write(', '.join(i) + "\n")
 
         ckt_detail.write("Fanout...\n")
         for gate_num in gates_only:
