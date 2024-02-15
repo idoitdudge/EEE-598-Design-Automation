@@ -15,7 +15,7 @@ args = parser.parse_args() # argument parser
 class Node:
     def __init__(self): # data structure to save each node
         self.name = "" # number only
-        self.outname = "" # gate type + gate number
+        self.outname = "" # gate type
         self.Cload = 0.0
         self.inputs = [] # gate number for fan-in
         self.fan_in = [] # full gate name for fan-in
@@ -48,47 +48,50 @@ if args.read_ckt:
             output_num = line.split()[1]
         
         elif ('gates' in line): # parse total gates line
-            gate_type = line.split('( ')[1].rstrip(' )\n')
+            gate_type = re.search('(.*?) \(\s*(.*?)\)', line, flags=re.DOTALL).group(2)
             total_gates.append(gate_type.split(' + '))
             total_gates = [[s.rstrip('s') for s in sublist] for sublist in total_gates]
 
-        elif (line.startswith ("INPUT")): # parse input gates
-            num = line.split('(')[1].rstrip(')\n')
-            gates[num] = Node()
-            gates[num].name = str(num)
-            gates[num].outname = "INPUT-" + str(num)
+        if (line.startswith ("INPUT")): # parse input gates
+            gate_name = re.search('INPUT\((.*?)\)', line, flags=re.DOTALL).group(1)
+            gates[gate_name] = Node()
+            gates[gate_name].name = str(gate_name)
+            gates[gate_name].outname = "INPUT-" + str(gate_name)
         
         elif (line.startswith ("OUTPUT")): # parse input gates
-            num = line.split('(')[1].rstrip(')\n')
-            outputs[num] = Node()
-            outputs[num].name = str(num)
-            outputs[num].outname = "OUTPUT-" + str(num)
+            gate_name = re.search('OUTPUT\((.*?)\)', line, flags=re.DOTALL).group(1)
+            outputs[gate_name] = Node()
+            outputs[gate_name].name = str(gate_name)
+            outputs[gate_name].outname = "OUTPUT-" + str(gate_name)
         
-        elif (',' in line): # parse gates with more than one inputs
-            gate_type = line.split('= ')[1].split('(')[0].strip()
-            num = line.split(' =')[0].strip()
+        elif ('=' in line) and (',' in line): # parse gates with more than one inputs
+            gate_name = re.search('(.*?) = (.*?)\((.*?)\)', line, flags=re.DOTALL).group(1)
+            gate_type = re.search('(.*?) = (.*?)\((.*?)\)', line, flags=re.DOTALL).group(2)
+            gates[gate_name] = Node()
+            gates[gate_name].name = gate_name
+            gates[gate_name].outname = (gate_type + "-" + gate_name)
             fan_in = line.split('(')[1].split(')')[0].split(', ')
-            gates_only.append(num)
-            gates[num] = Node()
-            gates[num].name = str(num)
-            gates[num].outname = str(gate_type) + "-" + str(num)
+            gates_only.append(gate_name)
+           
             for i in fan_in: # get fanin for current gate
-                gates[num].inputs.append(i)
-                gates[num].fan_in.append(gates[i].outname)
+                gates[gate_name].inputs.append(i)
 
         elif ('NOT' in line) or ('BUFF' in line): # parse NOT and BUFFER gates
-            gate_type = line.split('= ')[1].split('(')[0].strip()
-            num = line.split(' =')[0].strip()
+            gate_name = re.search('(.*?) = (.*?)\((.*?)\)', line, flags=re.DOTALL).group(1)
+            gate_type = re.search('(.*?) = (.*?)\((.*?)\)', line, flags=re.DOTALL).group(2)
+            gates[gate_name] = Node()
+            gates[gate_name].name = gate_name
+            gates[gate_name].outname = (gate_type + "-" + gate_name)
             fan_in = line.split('(')[1].split(')')[0].split(', ')
-            gates_only.append(num)
-            gates[num] = Node()
-            gates[num].name = str(num)
-            gates[num].outname = str(gate_type) + "-" + str(num)
-            for i in fan_in: # get fanin for current gate
-                gates[num].inputs.append(i)
-                gates[num].fan_in.append(gates[i].outname)
+            gates_only.append(gate_name)
 
-        
+            for i in fan_in: # get fanin for current gate
+                gates[gate_name].inputs.append(i)
+
+    for gate in gates:
+        for i in gates[gate].inputs:
+            gates[gate].fan_in.append(gates[i].outname)
+
     for gate in gates: # get fanouts for each gates
         if gates[gate].inputs:
             for i in gates[gate].inputs:

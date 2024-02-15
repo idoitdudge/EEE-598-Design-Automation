@@ -1,6 +1,6 @@
 5 primary inputs
 2 primary outputs
-6 NAND gates
+6 NANDs  gates
 Fanout...
 NAND-10: NAND-22
 NAND-11: NAND-16, NAND-19
