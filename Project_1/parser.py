@@ -118,7 +118,7 @@ if args.read_ckt:
             ckt_detail.write(gates[gate_num].outname + ": " + ', '.join(gates[gate_num].fan_out))
             ckt_detail.write("\n")
 
-        ckt_detail.write("Fanin...\n")
+        ckt_detail.write("\nFanin...\n")
         for gate_num in gates_only:
             ckt_detail.write(gates[gate_num].outname + ": " + ', '.join(gates[gate_num].fan_in))
             ckt_detail.write("\n")
