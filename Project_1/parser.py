@@ -37,6 +37,7 @@ if args.read_ckt:
     input_num = "" # number of inputs
     output_num = "" # number of outputs
     total_gates = [] # total number of gates
+    num_of_gates = {}
 
     for line in content:
         line.strip() # remove trailing white spaces
@@ -47,9 +48,9 @@ if args.read_ckt:
         elif ('outputs' in line): # parse second output line
             output_num = line.split()[1]
         
-        elif ('gates' in line): # parse total gates line
-            gate_type = re.search('(.*?) \(\s*(.*?)\)', line, flags=re.DOTALL).group(2)
-            total_gates.append(gate_type.split(' + '))
+        # elif ('gates' in line): # parse total gates line
+        #     gate_type = re.search('(.*?) \(\s*(.*?)\)', line, flags=re.DOTALL).group(2)
+        #     total_gates.append(gate_type.split(' + '))
 
         if (line.startswith ("INPUT")): # parse input gates
             gate_name = re.search('INPUT\((.*?)\)', line, flags=re.DOTALL).group(1)
@@ -66,6 +67,13 @@ if args.read_ckt:
         elif ('=' in line) and (',' in line): # parse gates with more than one inputs
             gate_name = re.search('(.*?) = (.*?)\((.*?)\)', line, flags=re.DOTALL).group(1)
             gate_type = re.search('(.*?) = (.*?)\((.*?)\)', line, flags=re.DOTALL).group(2)
+            
+            if gate_type in num_of_gates:
+                num_of_gates[gate_type] += 1
+            
+            else:
+                num_of_gates[gate_type] = 1
+
             gates[gate_name] = Node()
             gates[gate_name].name = gate_name
             gates[gate_name].outname = (gate_type + "-" + gate_name)
@@ -78,6 +86,14 @@ if args.read_ckt:
         elif ('NOT' in line) or ('BUFF' in line): # parse NOT and BUFFER gates
             gate_name = re.search('(.*?) = (.*?)\((.*?)\)', line, flags=re.DOTALL).group(1)
             gate_type = re.search('(.*?) = (.*?)\((.*?)\)', line, flags=re.DOTALL).group(2)
+
+            if gate_type in num_of_gates:
+                num_of_gates[gate_type] += 1
+            
+            else:
+                num_of_gates[gate_type] = 1
+
+    
             gates[gate_name] = Node()
             gates[gate_name].name = gate_name
             gates[gate_name].outname = (gate_type + "-" + gate_name)
@@ -101,17 +117,12 @@ if args.read_ckt:
         gates[output].outputs.append(output)
         gates[output].fan_out.append(outputs[output].outname)
 
-    # test = '431'
-
-    # print(gates[test].outname)
-    # print(gates[test].fan_in)
-    # print(gates[test].fan_out)
-
     with open ('ckt_details.txt', 'w') as ckt_detail: # write outputs to ckt_details.txt
         ckt_detail.write(input_num + " primary inputs\n")
         ckt_detail.write(output_num + " primary outputs\n")
-        for i in total_gates:
-            ckt_detail.write(', '.join(i) + "\n")
+        for gate_type in num_of_gates:
+            if num_of_gates[gate_type] != 0:
+                ckt_detail.write(str(num_of_gates[gate_type]) + " " + gate_type + "\n")
 
         ckt_detail.write("Fanout...\n")
         for gate_num in gates_only:
