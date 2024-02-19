@@ -1,6 +1,14 @@
 This folder consists of all the files relating to Project 1: Developing a topological traversal algorithm to perform Static Timing Analysis for circuits <br />
 
-# Commands
+# Requirements
+Requirements.txt contains the dependencies needed to run the program. To load all of them, use the command:
+```
+
+pip3 install -r requirements.txt
+
+```
+
+## Commands
 
 To use the parser, run the command to get circuit information:
 ```
