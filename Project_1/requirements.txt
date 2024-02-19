@@ -1,1 +1,1 @@
-pip install numpy
+pip3 install numpy
