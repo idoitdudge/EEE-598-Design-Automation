@@ -15,7 +15,8 @@ args = parser.parse_args() # argument parser
 class Node:
     def __init__(self): # data structure to save each node
         self.name = "" # number only
-        self.outname = "" # gate type
+        self.outname = "" # full gate name
+        self.gatetype = "" # gate type
         self.Cload = 0.0
         self.inputs = [] # gate number for fan-in
         self.fan_in = [] # full gate name for fan-in
@@ -56,12 +57,14 @@ if args.read_ckt:
             gate_name = re.search('INPUT\((.*?)\)', line, flags=re.DOTALL).group(1)
             gates[gate_name] = Node()
             gates[gate_name].name = str(gate_name)
+            gates[gate_name].gatetype = str("INPUT")
             gates[gate_name].outname = "INPUT-" + str(gate_name)
         
         elif (line.startswith ("OUTPUT")): # parse input gates
             gate_name = re.search('OUTPUT\((.*?)\)', line, flags=re.DOTALL).group(1)
             outputs[gate_name] = Node()
             outputs[gate_name].name = str(gate_name)
+            outputs[gate_name].gatetype = str("OUTPUT")
             outputs[gate_name].outname = "OUTPUT-" + str(gate_name)
         
         elif ('=' in line) and (',' in line): # parse gates with more than one inputs
@@ -76,6 +79,7 @@ if args.read_ckt:
 
             gates[gate_name] = Node()
             gates[gate_name].name = gate_name
+            gates[gate_name].gatetype = gate_type
             gates[gate_name].outname = (gate_type + "-" + gate_name)
             fan_in = line.split('(')[1].split(')')[0].split(', ')
             gates_only.append(gate_name)
@@ -96,12 +100,18 @@ if args.read_ckt:
     
             gates[gate_name] = Node()
             gates[gate_name].name = gate_name
+            gates[gate_name].gatetype = gate_type
             gates[gate_name].outname = (gate_type + "-" + gate_name)
             fan_in = line.split('(')[1].split(')')[0].split(', ')
             gates_only.append(gate_name)
 
             for i in fan_in: # get fanin for current gate
                 gates[gate_name].inputs.append(i)
+
+    for gate in gates:
+        if (gate in outputs) and gates[gate].gatetype == 'INPUT':
+            gates_only.append(gate)
+            print(gate)
 
     for gate in gates:
         for i in gates[gate].inputs:
@@ -131,6 +141,8 @@ if args.read_ckt:
 
         ckt_detail.write("\nFanin...\n")
         for gate_num in gates_only:
+            if len(gates[gate_num].fan_in) == 0:
+                break
             ckt_detail.write(gates[gate_num].outname + ": " + ', '.join(gates[gate_num].fan_in))
             ckt_detail.write("\n")
 
