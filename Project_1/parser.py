@@ -111,7 +111,6 @@ if args.read_ckt:
     for gate in gates:
         if (gate in outputs) and gates[gate].gatetype == 'INPUT':
             gates_only.append(gate)
-            print(gate)
 
     for gate in gates:
         for i in gates[gate].inputs:
