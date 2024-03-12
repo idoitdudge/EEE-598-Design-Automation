@@ -114,7 +114,7 @@ if args.read_ckt:
     for gate in gates:
         if (gate in outputs) and gates[gate].gatetype == 'INPUT':
             gates_only.append(gate)
-            #print(gate)
+           # print(gate)
 
     for gate in gates:
         for i in gates[gate].inputs:
@@ -127,8 +127,6 @@ if args.read_ckt:
                 gates[i].fan_out.append(gates[gate].outname)
 
     for output in outputs: # match OUTPUT- gates to corresponding final output gates
-        if (gates[output].gatetype == 'INPUT'):
-            gates[output].inputs.append(output)
         gates[output].outputs.append(output)
         gates[output].fan_out.append(outputs[output].outname)
 
@@ -200,17 +198,12 @@ class LUT:
 
 def initialize (gate_queue):
     for gate in gates:
-        for i in range (len(gates[gate].inputs)):
+        for i in range (len(gates[gate].fan_in)):
             gates[gate].marked.append(-1)
-            gates[gate].Tau_in.append(-1)
-            gates[gate].inp_arrival.append(-1)
 
     for gate in gates:
         if gates[gate].gatetype == 'INPUT':
             gates[gate].Tau_out = 0.002
-            gates[gate].Tau_in = []
-            gates[gate].Tau_in.append(-1)
-            gates[gate].marked = []
             gates[gate].marked.append(1)
             gates[gate].max_out_arrival = 0
             queue_insertion_check(gate_queue, gate)
@@ -251,21 +244,15 @@ def interpolation (v11, v12, v21, v22, c, c1, c2, tau, tau1, tau2):
 
 def delay_search (lut_instance, name, tau_in, cload, n_value):
     gate_index = lut_instance.Allgate_name_clean.index(name)
+    
     tau_values = list(map(float, lut_instance.Tau_in_vals_delay[gate_index]))
     cload_values = list(map(float, lut_instance.Cload_vals_delay[gate_index]))
     
     slew_index = find_indices (tau_values, tau_in)
     cap_index = find_indices (cload_values, cload)
 
-    if (tau_in > tau_values[len(tau_values) - 1]):
-        slew_index = (len(tau_values) - 2, len(tau_values) - 1)
-
-    if (cload > cload_values[len(cload_values) - 1]):
-        cap_index = (len(cload_values) - 2, len(cload_values) - 1)
-
     if isinstance(slew_index, tuple) or isinstance(cap_index, tuple):
         if isinstance(slew_index, int):
-            #print("1 int")
             if n_value <= 2:
                 return interpolation(float(lut_instance.All_delays[gate_index][slew_index][cap_index[0]]), float(lut_instance.All_delays[gate_index][slew_index][cap_index[1]]), 
                                         float(lut_instance.All_delays[gate_index][slew_index + 1][cap_index[0]]), float(lut_instance.All_delays[gate_index][slew_index + 1][cap_index[1]]),
@@ -273,7 +260,6 @@ def delay_search (lut_instance, name, tau_in, cload, n_value):
                                         tau_in, tau_values[slew_index], tau_values[slew_index + 1])
             
             else:
-                #print("1 int")
                 return interpolation(float(lut_instance.All_delays[gate_index][slew_index][cap_index[0]]), float(lut_instance.All_delays[gate_index][slew_index][cap_index[1]]), 
                                         float(lut_instance.All_delays[gate_index][slew_index + 1][cap_index[0]]), float(lut_instance.All_delays[gate_index][slew_index + 1][cap_index[1]]),
                                         cload, cload_values[cap_index[0]], cload_values[cap_index[1]],
@@ -281,14 +267,12 @@ def delay_search (lut_instance, name, tau_in, cload, n_value):
         
         elif isinstance(cap_index, int):
             if n_value <= 2:
-                #print("1 int")
                 return interpolation(float(lut_instance.All_delays[gate_index][slew_index[0]][cap_index]), float(lut_instance.All_delays[gate_index][slew_index[0]][cap_index + 1]), 
                                 float(lut_instance.All_delays[gate_index][slew_index[1]][cap_index]), float(lut_instance.All_delays[gate_index][slew_index[1]][cap_index + 1]),
                                 cload, cload_values[cap_index], cload_values[gate_index][cap_index + 1],
                                 tau_in, tau_values[slew_index[0]], tau_values[gate_index][slew_index[1]])
 
             else:
-                #print("1 int")
                 return interpolation(float(lut_instance.All_delays[gate_index][slew_index[0]][cap_index]), float(lut_instance.All_delays[gate_index][slew_index[0]][cap_index + 1]), 
                                 float(lut_instance.All_delays[gate_index][slew_index[1]][cap_index]), float(lut_instance.All_delays[gate_index][slew_index[1]][cap_index + 1]),
                                 cload, cload_values[cap_index], cload_values[gate_index][cap_index + 1],
@@ -296,14 +280,12 @@ def delay_search (lut_instance, name, tau_in, cload, n_value):
             
         else:
             if n_value <= 2:
-                #print("interp 2")
                 return interpolation(float(lut_instance.All_delays[gate_index][slew_index[0]][cap_index[0]]), float(lut_instance.All_delays[gate_index][slew_index[0]][cap_index[1]]), 
                                 float(lut_instance.All_delays[gate_index][slew_index[1]][cap_index[0]]), float(lut_instance.All_delays[gate_index][slew_index[1]][cap_index[1]]),
                                 cload, cload_values[cap_index[0]], cload_values[cap_index[1]],
                                 tau_in, tau_values[slew_index[0]], tau_values[slew_index[1]])
 
             else:
-                #print("interp 2")
                 return interpolation(float(lut_instance.All_delays[gate_index][slew_index[0]][cap_index[0]]), float(lut_instance.All_delays[gate_index][slew_index[0]][cap_index[1]]), 
                                 float(lut_instance.All_delays[gate_index][slew_index[1]][cap_index[0]]), float(lut_instance.All_delays[gate_index][slew_index[1]][cap_index[1]]),
                                 cload, cload_values[cap_index[0]], cload_values[cap_index[1]],
@@ -312,11 +294,9 @@ def delay_search (lut_instance, name, tau_in, cload, n_value):
 
     else:
         if n_value <= 2:
-            #print("2 int")
             return float(lut_instance.All_delays[slew_index][cap_index])
         
         else:
-            #print("2 int")
             return float(lut_instance.All_delays[slew_index][cap_index]) * (n_value / 2)
 
 
@@ -325,29 +305,19 @@ def slew_search (lut_instance, name, tau_in, cload, n_value):
     
     tau_values = list(map(float, lut_instance.Tau_in_vals_slew[gate_index]))
     cload_values = list(map(float, lut_instance.Cload_vals_slew[gate_index]))
-
-
-
+    
     slew_index = find_indices (tau_values, tau_in)
     cap_index = find_indices (cload_values, cload)
-
-    if (tau_in > tau_values[len(tau_values) - 1]):
-        slew_index = (len(tau_values) - 2, len(tau_values) - 1)
-
-    if (cload > cload_values[len(cload_values) - 1]):
-        cap_index = (len(cload_values) - 2, len(cload_values) - 1)
 
     if isinstance(slew_index, tuple) or isinstance(cap_index, tuple):
         if isinstance(slew_index, int):
             if n_value <= 2:
-                #print("1 int")
                 return interpolation(float(lut_instance.All_slews[gate_index][slew_index][cap_index[0]]), float(lut_instance.All_slews[gate_index][slew_index][cap_index[1]]), 
                                         float(lut_instance.All_slews[gate_index][slew_index + 1][cap_index[0]]), float(lut_instance.All_slews[gate_index][slew_index + 1][cap_index[1]]),
                                         cload, cload_values[cap_index[0]], cload_values[cap_index[1]],
                                         tau_in, tau_values[slew_index], tau_values[slew_index + 1])
             
             else:
-                #print("1 int")
                 return interpolation(float(lut_instance.All_slews[gate_index][slew_index][cap_index[0]]), float(lut_instance.All_slews[gate_index][slew_index][cap_index[1]]), 
                                         float(lut_instance.All_slews[gate_index][slew_index + 1][cap_index[0]]), float(lut_instance.All_slews[gate_index][slew_index + 1][cap_index[1]]),
                                         cload, cload_values[cap_index[0]], cload_values[cap_index[1]],
@@ -355,14 +325,12 @@ def slew_search (lut_instance, name, tau_in, cload, n_value):
         
         elif isinstance(cap_index, int):
             if n_value <= 2:
-                #print("1 int")
                 return interpolation(float(lut_instance.All_slews[gate_index][slew_index[0]][cap_index]), float(lut_instance.All_slews[gate_index][slew_index[0]][cap_index + 1]), 
                                 float(lut_instance.All_slews[gate_index][slew_index[1]][cap_index]), float(lut_instance.All_slews[gate_index][slew_index[1]][cap_index + 1]),
                                 cload, cload_values[cap_index], cload_values[gate_index][cap_index + 1],
                                 tau_in, tau_values[slew_index[0]], tau_values[gate_index][slew_index[1]])
             
             else:
-                #print("1 int")
                 return interpolation(float(lut_instance.All_slews[gate_index][slew_index[0]][cap_index]), float(lut_instance.All_slews[gate_index][slew_index[0]][cap_index + 1]), 
                                 float(lut_instance.All_slews[gate_index][slew_index[1]][cap_index]), float(lut_instance.All_slews[gate_index][slew_index[1]][cap_index + 1]),
                                 cload, cload_values[cap_index], cload_values[gate_index][cap_index + 1],
@@ -370,14 +338,12 @@ def slew_search (lut_instance, name, tau_in, cload, n_value):
 
         else:
             if n_value <= 2:
-                #print("interp 2")
                 return interpolation(float(lut_instance.All_slews[gate_index][slew_index[0]][cap_index[0]]), float(lut_instance.All_slews[gate_index][slew_index[0]][cap_index[1]]), 
                                 float(lut_instance.All_slews[gate_index][slew_index[1]][cap_index[0]]), float(lut_instance.All_slews[gate_index][slew_index[1]][cap_index[1]]),
                                 cload, cload_values[cap_index[0]], cload_values[cap_index[1]],
                                 tau_in, tau_values[slew_index[0]], tau_values[slew_index[1]])
             
             else:
-                #print("interp 2")
                 return interpolation(float(lut_instance.All_slews[gate_index][slew_index[0]][cap_index[0]]), float(lut_instance.All_slews[gate_index][slew_index[0]][cap_index[1]]), 
                                 float(lut_instance.All_slews[gate_index][slew_index[1]][cap_index[0]]), float(lut_instance.All_slews[gate_index][slew_index[1]][cap_index[1]]),
                                 cload, cload_values[cap_index[0]], cload_values[cap_index[1]],
@@ -385,11 +351,9 @@ def slew_search (lut_instance, name, tau_in, cload, n_value):
 
     else:
         if n_value <= 2:
-            #print("2 int")
             return float(lut_instance.All_delays[slew_index][cap_index])
         
         else:
-            #print("2 int")
             return float(lut_instance.All_delays[slew_index][cap_index]) * (n_value / 2)
 
 def main ():
@@ -399,9 +363,10 @@ def main ():
     gate_queue = []
 
     initialize(gate_queue)
+
     while gate_queue:
         curr_gate = gate_queue.pop(0)
-        #print(gate_queue)
+
         for fan_outs in gates[curr_gate].outputs:
             if fan_outs != gates[curr_gate].name:
                 check_marked (fan_outs)
@@ -409,60 +374,43 @@ def main ():
                 cap_index = lut_instance.Allgate_name_clean.index(gates[fan_outs].gatetype)
 
                 gates[curr_gate].Cload = gates[curr_gate].Cload + float(lut_instance.Cvals[cap_index])
-            
+
+                # if fan_outs != gates[curr_gate].name:
                 queue_insertion_check (gate_queue, fan_outs)
 
-            elif (fan_outs == gates[curr_gate].name): #and (len(gates[curr_gate].outputs) == 1):
-                #print(gates[curr_gate].name, gates[curr_gate].outputs, gates[curr_gate].Cload)
-                gates[curr_gate].Cload = gates[curr_gate].Cload + 4 * float(lut_instance.Cvals[lut_instance.Allgate_name_clean.index('NOT')])
-                #print(fan_outs, curr_gate, cap_index, gates[curr_gate].Cload)
+            else:
+                gates[curr_gate].Cload = 4 * float(lut_instance.Cvals[lut_instance.Allgate_name_clean.index('NOT')])
         
         if (gates[curr_gate].gatetype == 'INPUT'):
             for fan_outs in gates[curr_gate].outputs:
-
-                index = gates[fan_outs].inputs.index(gates[curr_gate].name)
-
-                gates[fan_outs].Tau_in[index] = gates[curr_gate].Tau_out
-
-                gates[fan_outs].inp_arrival[index] = gates[curr_gate].max_out_arrival
+                gates[fan_outs].Tau_in.append(gates[curr_gate].Tau_out)
+                gates[fan_outs].inp_arrival.append(gates[curr_gate].max_out_arrival)
+        
         else:
-            #print("Current gate:" + curr_gate, "Fanins: ", gates[curr_gate].inputs, gates[curr_gate].Tau_in)
             for tau_in in gates[curr_gate].Tau_in:
                 n_value = len(gates[curr_gate].Tau_in)
                 gates[curr_gate].delays.append(delay_search (lut_instance, gates[curr_gate].gatetype, tau_in, gates[curr_gate].Cload, n_value))
-                #print(gates[curr_gate].name, n_value, tau_in, gates[curr_gate].Cload, gates[curr_gate].Tau_in, gates[curr_gate].delays)
                 gates[curr_gate].Tau_calcs.append(slew_search (lut_instance, gates[curr_gate].gatetype, tau_in, gates[curr_gate].Cload, n_value))
-            
-            #print(gates[curr_gate].delays, gates[curr_gate].Tau_calcs, gates[curr_gate].Cload)
 
             for i, arrival_time in enumerate(gates[curr_gate].inp_arrival):
                 gates[curr_gate].outp_arrival.append(arrival_time + gates[curr_gate].delays[i])
-
+            
             gates[curr_gate].max_out_arrival = max(gates[curr_gate].outp_arrival)
             max_index = gates[curr_gate].outp_arrival.index(gates[curr_gate].max_out_arrival)
             gates[curr_gate].Tau_out = gates[curr_gate].Tau_calcs[max_index]
 
             for fan_outs in gates[curr_gate].outputs:
-                #print("Curr gate out: ", gates[curr_gate].outp_arrival, gates[curr_gate].max_out_arrival)
-                if (fan_outs == gates[curr_gate].name):
-                    #print("Inside")
-                    gates[fan_outs].inp_arrival.append(gates[curr_gate].max_out_arrival)
-                    gates[fan_outs].Tau_in.append(gates[curr_gate].Tau_out)
-                
-                else:
-                    index = gates[fan_outs].inputs.index(gates[curr_gate].name)
-                    gates[fan_outs].inp_arrival[index] = gates[curr_gate].max_out_arrival
-                    gates[fan_outs].Tau_in[index] = (gates[curr_gate].Tau_out)
-                #print("Fanout name: ", gates[fan_outs].name, gates[fan_outs].inputs, gates[fan_outs].inp_arrival)
+                gates[fan_outs].inp_arrival.append(gates[curr_gate].max_out_arrival)
+                gates[fan_outs].Tau_in.append(gates[curr_gate].Tau_out)
+
     circuit_delay = float('-inf')
 
     for gate in gates:
         for outs in outputs:
             if gates[gate].name == outputs[outs].name:
-                #print(gates[gate].name, gates[gate].max_out_arrival, gates[gate].inputs, gates[gate].delays, gates[gate].inp_arrival, gates[gate].outp_arrival)
                 if gates[gate].max_out_arrival > circuit_delay:
+                    #print(gates[gate].max_out_arrival)
                     circuit_delay = gates[gate].max_out_arrival
     
     print("Circuit delay: ", circuit_delay * pow(10, 3), "picoseconds")
 
-main()

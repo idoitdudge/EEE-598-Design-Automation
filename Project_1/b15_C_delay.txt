@@ -1,0 +1,1 @@
+Circuit delay:  2258.547983295136 picoseconds
