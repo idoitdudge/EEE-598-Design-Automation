@@ -48,10 +48,6 @@ if args.read_ckt:
             
         elif ('outputs' in line): # parse second output line
             output_num = line.split()[1]
-        
-        # elif ('gates' in line): # parse total gates line
-        #     gate_type = re.search('(.*?) \(\s*(.*?)\)', line, flags=re.DOTALL).group(2)
-        #     total_gates.append(gate_type.split(' + '))
 
         if (line.startswith ("INPUT")): # parse input gates
             gate_name = re.search('INPUT\((.*?)\)', line, flags=re.DOTALL).group(1)

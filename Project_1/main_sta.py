@@ -23,15 +23,15 @@ class Node:
         self.fan_in = [] # full gate name for fan-in
         self.outputs = [] # gate number for fan-out
         self.fan_out = [] # full gate name for fan-out
-        self.delays = []
-        self.Tau_in = []
-        self.Tau_calcs = []
-        self.inp_arrival = []
-        self.outp_arrival = []
-        self.marked = []
-        self.max_out_arrival = 0.0
-        self.Tau_out = 0.0
-
+        self.delays = [] # delay values
+        self.Tau_in = [] # tau in values
+        self.Tau_calcs = [] # tau values during interpolation
+        self.inp_arrival = [] # input arrival time
+        self.outp_arrival = [] # output arrival time
+        self.marked = [] # node marker for traversal
+        self.max_out_arrival = 0.0 # max arrival time
+        self.Tau_out = 0.0 # output slew
+ 
 if args.read_ckt:
     with open(args.read_ckt, "r") as f:  # open file and read lines
         content = f.readlines()
@@ -145,7 +145,7 @@ class LUT:
         self.Tau_in_vals_delay = np.empty((0, 7))
         self.Cvals = np.array([])
 
-    def assign_arrays (self, NLDM_file):
+    def assign_arrays (self, NLDM_file): # Parse LUT file
         with open (NLDM_file, 'r') as lib_file:
             content = lib_file.read()
 
@@ -161,14 +161,14 @@ class LUT:
         self.Allgate_name_clean = [gate.replace ('_X1', '') for gate in self.Allgate_name_clean]
 
         
-        for i, cell_name in enumerate (self.Allgate_name_clean):
+        for i, cell_name in enumerate (self.Allgate_name_clean): # Clean buffer and inverter name to a new array
             if 'BUF' in cell_name:
                 self.Allgate_name_clean[i] = cell_name.replace('BUF', 'BUFF')
             
             elif 'INV' in cell_name:
                 self.Allgate_name_clean[i] = cell_name.replace('INV', 'NOT')
         
-        for cell_name in self.Allgate_name:
+        for cell_name in self.Allgate_name: # Put index1, index2, slew and delay values in arrays 
             current_cell = re.search('cell \(' + cell_name + '\)(.*?)(cell \(|$)', content, flags=re.DOTALL).group(1)
             for delay_slew in ['cell_delay', 'output_slew']:
                 data_type = re.search(delay_slew + '(.*?){(.*?)}', current_cell, flags=re.DOTALL).group(2)
@@ -199,7 +199,7 @@ class LUT:
                         proxy_array = np.vstack([proxy_array, slew_arr])
                     self.All_slews = np.vstack([self.All_slews, [proxy_array]])
 
-def initialize (gate_queue):
+def initialize (gate_queue): # Initialize queue and other attributes for forward traversal
     for gate in gates:
         for i in range (len(gates[gate].inputs)):
             gates[gate].marked.append(-1)
@@ -216,17 +216,17 @@ def initialize (gate_queue):
             gates[gate].max_out_arrival = 0
             queue_insertion_check(gate_queue, gate)
         
-def check_marked (gate):
+def check_marked (gate): # Mark Node.marked attribute for traversal
     for i, item in enumerate(gates[gate].marked):
         if item == -1:
             gates[gate].marked[i] = 1
             break
 
-def queue_insertion_check (gate_queue, gate):
+def queue_insertion_check (gate_queue, gate): # Queue insertion checker. Only enters queue if marked is all 1
     if all(element == 1 for element in gates[gate].marked):
         gate_queue.append(gate)
 
-def find_indices (list, val):
+def find_indices (list, val): # Find indices for index1 and index2. If they don't belong, return a tuple of the high and low index
     index1, index2 = 0, 0
 
     for i, value in enumerate(list):
@@ -242,7 +242,7 @@ def find_indices (list, val):
     
     return index1, index2
 
-def interpolation (v11, v12, v21, v22, c, c1, c2, tau, tau1, tau2):
+def interpolation (v11, v12, v21, v22, c, c1, c2, tau, tau1, tau2): # 2D bilinear interpolation function
     u = v11 * (c2 - c) * (tau2 - tau)
     v = v12 * (c - c1) * (tau2 - tau)
     w = v21 * (c2 - c) * (tau - tau1)
@@ -250,7 +250,7 @@ def interpolation (v11, v12, v21, v22, c, c1, c2, tau, tau1, tau2):
     y = (c2 - c1) * (tau2 - tau1) # normalize factor
     return (u + v + w + x) / y
 
-def delay_search (lut_instance, name, tau_in, cload, n_value):
+def delay_search (lut_instance, name, tau_in, cload, n_value): # Delay search function. Takes in Cload and Tau in and performs 2D Interpolation
     gate_index = lut_instance.Allgate_name_clean.index(name)
     tau_values = list(map(float, lut_instance.Tau_in_vals_delay[gate_index]))
     cload_values = list(map(float, lut_instance.Cload_vals_delay[gate_index]))
@@ -258,11 +258,11 @@ def delay_search (lut_instance, name, tau_in, cload, n_value):
     slew_index = find_indices (tau_values, tau_in)
     cap_index = find_indices (cload_values, cload)
 
-    if (tau_in > tau_values[len(tau_values) - 1]):
+    if (tau_in > tau_values[len(tau_values) - 1]): # If values exceed the array, tuple becomes the last 2 indexes
         slew_index = (len(tau_values) - 2, len(tau_values) - 1)
 
     if (cload > cload_values[len(cload_values) - 1]):
-        cap_index = (len(cload_values) - 2, len(cload_values) - 1)
+        cap_index = (len(cload_values) - 2, len(cload_values) - 1) # Same as above
 
     if isinstance(slew_index, tuple) or isinstance(cap_index, tuple):
         if isinstance(slew_index, int):
@@ -321,7 +321,7 @@ def delay_search (lut_instance, name, tau_in, cload, n_value):
             return float(lut_instance.All_delays[slew_index][cap_index]) * (n_value / 2)
 
 
-def slew_search (lut_instance, name, tau_in, cload, n_value):
+def slew_search (lut_instance, name, tau_in, cload, n_value): # Slew search function. Takes in Cload and Tau in and performs 2D Interpolation
     gate_index = lut_instance.Allgate_name_clean.index(name)
     
     tau_values = list(map(float, lut_instance.Tau_in_vals_slew[gate_index]))
@@ -332,7 +332,7 @@ def slew_search (lut_instance, name, tau_in, cload, n_value):
     slew_index = find_indices (tau_values, tau_in)
     cap_index = find_indices (cload_values, cload)
 
-    if (tau_in > tau_values[len(tau_values) - 1]):
+    if (tau_in > tau_values[len(tau_values) - 1]): # Same as the delay version. Last 2 indices if exceed final element's value
         slew_index = (len(tau_values) - 2, len(tau_values) - 1)
 
     if (cload > cload_values[len(cload_values) - 1]):
@@ -456,10 +456,10 @@ def arrival(gates, delay):
                         RAT[in_gate] = min(RAT[in_gate], rt_input_gate) 
         
         
-        print("Gate: ", {current_gate.outname})
-        print(f"Inputs: {current_gate.inputs}")
-        print(f"Current gate delay of gate: ", current_gate.outname, (current_gate.delays))
-        print("Required arrival time: ", RAT[current_gate.name] * 1000, "ps") 
+        # print("Gate: ", {current_gate.outname})
+        # print(f"Inputs: {current_gate.inputs}")
+        # print(f"Current gate delay of gate: ", current_gate.outname, (current_gate.delays))
+        # print("Required arrival time: ", RAT[current_gate.name] * 1000, "ps") 
     
     return RAT
 
@@ -499,42 +499,35 @@ def critpath(gates, outputs):
         current_gate = gates[smol_slack_in]
         crit.insert(0, current_gate)
     
-    return [gate.outname for gate in crit]
+    crit_path = []
+    last_gate = ""
+    for gate in crit:
+        crit_path.append(gate.outname)
+        last_gate = gate.name
+    crit_path.append("OUTPUT-" + last_gate)
+    return crit_path
 
 #Purpose of this function finds the output with the minimum slack
-def slack(gates, outputs, delay, RAT, FATimes):
-    with open('slack_times.txt', 'w') as f:  
-        
-        if isinstance(RAT, dict) and isinstance(FATimes, dict):  
-            for gate in gates.values():
-                if gate.name in FATimes and gate.name in RAT:
-                    forward_arrival_time = FATimes[gate.name]    
-                    required_arrival_time = RAT[gate.name]
-                    slack = required_arrival_time - forward_arrival_time
-                    gate.slack = slack
+def slack(gates, outputs, delay, RAT, FATimes):        
+    if isinstance(RAT, dict) and isinstance(FATimes, dict):  
+        for gate in gates.values():
+            if gate.name in FATimes and gate.name in RAT:
+                forward_arrival_time = FATimes[gate.name]    
+                required_arrival_time = RAT[gate.name]
+                slack = required_arrival_time - forward_arrival_time
+                gate.slack = slack
                     
-                    f.write(f"Slack for gate {gate.outname}: {slack * pow(10, 3)} picoseconds\n") 
-        
-        elif not isinstance(RAT, dict):
-            f.write("Invalid input for RAT. Expected a dictionary.\n")
-        
-        elif not isinstance(FATimes, dict):
-            f.write("Invalid input for FATimes. Expected a dictionary.\n")
-
-
-
-def main ():
+def main (): # Main function for forward and backwards traversal
     lut_instance = LUT()
     lut_instance.assign_arrays(args.read_nldm)
 
     gate_queue = []
 
-    initialize(gate_queue)
+    initialize(gate_queue) # Initialize gate queue for forward traversal
     while gate_queue:
         curr_gate = gate_queue.pop(0)
-        #print(gate_queue)
-        for fan_outs in gates[curr_gate].outputs:
-            if fan_outs != gates[curr_gate].name:
+        for fan_outs in gates[curr_gate].outputs: # Add values to queue
+            if fan_outs != gates[curr_gate].name: # Edge case checker for if input doesn't go straight to output
                 check_marked (fan_outs)
                 
                 cap_index = lut_instance.Allgate_name_clean.index(gates[fan_outs].gatetype)
@@ -543,12 +536,10 @@ def main ():
             
                 queue_insertion_check (gate_queue, fan_outs)
 
-            elif (fan_outs == gates[curr_gate].name): #and (len(gates[curr_gate].outputs) == 1):
-                #print(gates[curr_gate].name, gates[curr_gate].outputs, gates[curr_gate].Cload)
+            elif (fan_outs == gates[curr_gate].name): # Edge case. When traversal arrives at primary outputs
                 gates[curr_gate].Cload = gates[curr_gate].Cload + 4 * float(lut_instance.Cvals[lut_instance.Allgate_name_clean.index('NOT')])
-                #print(fan_outs, curr_gate, cap_index, gates[curr_gate].Cload)
         
-        if (gates[curr_gate].gatetype == 'INPUT'):
+        if (gates[curr_gate].gatetype == 'INPUT'): # Initialize Primary Input slew and max arrival to 0.002 and 0
             for fan_outs in gates[curr_gate].outputs:
 
                 index = gates[fan_outs].inputs.index(gates[curr_gate].name)
@@ -556,45 +547,37 @@ def main ():
                 gates[fan_outs].Tau_in[index] = gates[curr_gate].Tau_out
 
                 gates[fan_outs].inp_arrival[index] = gates[curr_gate].max_out_arrival
-        else:
-            #print("Current gate:" + curr_gate, "Fanins: ", gates[curr_gate].inputs, gates[curr_gate].Tau_in)
+        else: # Normal delay and slew calculations if not primary 
             for tau_in in gates[curr_gate].Tau_in:
                 n_value = len(gates[curr_gate].Tau_in)
-                gates[curr_gate].delays.append(delay_search (lut_instance, gates[curr_gate].gatetype, tau_in, gates[curr_gate].Cload, n_value))
-                #print(gates[curr_gate].name, n_value, tau_in, gates[curr_gate].Cload, gates[curr_gate].Tau_in, gates[curr_gate].delays)
-                gates[curr_gate].Tau_calcs.append(slew_search (lut_instance, gates[curr_gate].gatetype, tau_in, gates[curr_gate].Cload, n_value))
+                gates[curr_gate].delays.append(delay_search (lut_instance, gates[curr_gate].gatetype, tau_in, gates[curr_gate].Cload, n_value)) # Append to delay array
+                gates[curr_gate].Tau_calcs.append(slew_search (lut_instance, gates[curr_gate].gatetype, tau_in, gates[curr_gate].Cload, n_value)) # Append to slew array
             
-            #print(gates[curr_gate].delays, gates[curr_gate].Tau_calcs, gates[curr_gate].Cload)
-
-            for i, arrival_time in enumerate(gates[curr_gate].inp_arrival):
+            for i, arrival_time in enumerate(gates[curr_gate].inp_arrival): # Calculate arrival times
                 gates[curr_gate].outp_arrival.append(arrival_time + gates[curr_gate].delays[i])
 
-            gates[curr_gate].max_out_arrival = max(gates[curr_gate].outp_arrival)
+            gates[curr_gate].max_out_arrival = max(gates[curr_gate].outp_arrival) # Find max arrival time out of all arrival times
             max_index = gates[curr_gate].outp_arrival.index(gates[curr_gate].max_out_arrival)
-            gates[curr_gate].Tau_out = gates[curr_gate].Tau_calcs[max_index]
+            gates[curr_gate].Tau_out = gates[curr_gate].Tau_calcs[max_index] # Find argmax slew of max arrival time
 
-            for fan_outs in gates[curr_gate].outputs:
-                #print("Curr gate out: ", gates[curr_gate].outp_arrival, gates[curr_gate].max_out_arrival)
-                if (fan_outs == gates[curr_gate].name):
-                    #print("Inside")
+            for fan_outs in gates[curr_gate].outputs: # Add input slew as output slew of previous gate
+                if (fan_outs == gates[curr_gate].name): # For edge case (primary output)
                     gates[fan_outs].inp_arrival.append(gates[curr_gate].max_out_arrival)
                     gates[fan_outs].Tau_in.append(gates[curr_gate].Tau_out)
                 
-                else:
+                else: # Everything else
                     index = gates[fan_outs].inputs.index(gates[curr_gate].name)
                     gates[fan_outs].inp_arrival[index] = gates[curr_gate].max_out_arrival
                     gates[fan_outs].Tau_in[index] = (gates[curr_gate].Tau_out)
-                #print("Fanout name: ", gates[fan_outs].name, gates[fan_outs].inputs, gates[fan_outs].inp_arrival)
     delay = float('-inf')
 
     for gate in gates:
         for outs in outputs:
             if gates[gate].name == outputs[outs].name:
-                #print(gates[gate].name, gates[gate].max_out_arrival, gates[gate].inputs, gates[gate].delays, gates[gate].inp_arrival, gates[gate].outp_arrival)
-                if gates[gate].max_out_arrival > delay:
-                    delay = gates[gate].max_out_arrival
+                if gates[gate].max_out_arrival > delay: 
+                    delay = gates[gate].max_out_arrival # Output delay
     
-    print("Circuit delay: ", delay * pow(10, 3), "picoseconds")
+    #print("Circuit delay: ", delay * pow(10, 3), "picoseconds") 
     
     sort(gates)
 
@@ -606,7 +589,25 @@ def main ():
    
     slack(gates, outputs, delay, RAT, FATimes)
 
+    cry_path = []
     cry_path = critpath(gates, outputs)
-    print("Critical path: ", cry_path)
+    final_path = ",".join(cry_path)
+    #print("Critical path: ", cry_path)
+
+    delay = delay * pow(10, 3)
+    delay = str('{:.6g}'.format(delay))
+
+    with open ('ckt_traversal.txt', 'w') as sta:
+
+        sta.write(f"Circuit delay: {delay} picoseconds\n\n")
+        sta.write(f"Gate slacks:\n")
+        for gate in gates.values():
+            sta.write(f"{gate.outname}: {str('{:.6g}'.format(gate.slack * pow(10, 3)))} picoseconds\n")
+            for output in outputs:
+                if gate.name == outputs[output].name:
+                    sta.write(f"OUTPUT-{gate.name}: {str('{:.6g}'.format(gate.slack * pow(10, 3)))} picoseconds\n")
+        
+        sta.write(f"\nCritical path:\n")
+        sta.write(f"{final_path} ")
 
 main()

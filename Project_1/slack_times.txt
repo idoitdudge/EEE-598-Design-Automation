@@ -1,0 +1,11 @@
+Slack for gate INPUT-1: 31.58504370224032 picoseconds
+Slack for gate INPUT-2: 25.570672012713796 picoseconds
+Slack for gate INPUT-3: 6.250140326027628 picoseconds
+Slack for gate INPUT-6: 6.250140326027628 picoseconds
+Slack for gate INPUT-7: 31.05795314062039 picoseconds
+Slack for gate NAND-10: 31.58504370224032 picoseconds
+Slack for gate NAND-11: 6.250140326027628 picoseconds
+Slack for gate NAND-16: 6.25014032602763 picoseconds
+Slack for gate NAND-19: 11.879234985396684 picoseconds
+Slack for gate NAND-22: 6.250140326027623 picoseconds
+Slack for gate NAND-23: 6.250140326027623 picoseconds

@@ -28,8 +28,12 @@ class Node:
         self.inp_arrival = []
         self.outp_arrival = []
         self.marked = []
+        self.rat = 0.0
+        self.all_rat = []
         self.max_out_arrival = 0.0
         self.Tau_out = 0.0
+        self.max_delay = 0.0
+        self.marked_back = []
 
 if args.read_ckt:
     with open(args.read_ckt, "r") as f:  # open file and read lines
@@ -392,6 +396,35 @@ def slew_search (lut_instance, name, tau_in, cload, n_value):
             #print("2 int")
             return float(lut_instance.All_delays[slew_index][cap_index]) * (n_value / 2)
 
+def initialize_back(gate_back_queue, circuit_delay):
+    for gate in gates:
+        if len(gates[gate].inputs) == 0:
+            gates[gate].inputs.append('PRIME_IN')
+            #gates[gate].inputs.append(-1)
+            gates[gate].rat = float('inf')
+
+        for i in range (len(gates[gate].outputs)):
+            gates[gate].marked_back.append(-1)
+            gates[gate].rat = float('inf')
+
+    for gate in gates:
+        if gates[gate].name in outputs:
+            gates[gate].marked_back = []
+            gates[gate].marked_back.append(1)
+            gates[gate].rat = 1.1 * circuit_delay
+            gates[gate].all_rat.append(gates[gate].rat)
+            queue_insertion_check(gate_back_queue, gate)
+
+def check_marked_back (gate):
+    for i, item in enumerate(gates[gate].marked_back):
+        if item == -1:
+            gates[gate].marked_back[i] = 1
+            break
+
+def queue_insertion_check_back (gate_queue, gate):
+    if all(element == 1 for element in gates[gate].marked_back):
+        gate_queue.append(gate)
+
 def main ():
     lut_instance = LUT()
     lut_instance.assign_arrays(args.read_nldm)
@@ -433,6 +466,7 @@ def main ():
                 #print(gates[curr_gate].name, n_value, tau_in, gates[curr_gate].Cload, gates[curr_gate].Tau_in, gates[curr_gate].delays)
                 gates[curr_gate].Tau_calcs.append(slew_search (lut_instance, gates[curr_gate].gatetype, tau_in, gates[curr_gate].Cload, n_value))
             
+            #gates[curr_gate].max_delay = min(gates[curr_gate].delays)
             #print(gates[curr_gate].delays, gates[curr_gate].Tau_calcs, gates[curr_gate].Cload)
 
             for i, arrival_time in enumerate(gates[curr_gate].inp_arrival):
@@ -441,6 +475,7 @@ def main ():
             gates[curr_gate].max_out_arrival = max(gates[curr_gate].outp_arrival)
             max_index = gates[curr_gate].outp_arrival.index(gates[curr_gate].max_out_arrival)
             gates[curr_gate].Tau_out = gates[curr_gate].Tau_calcs[max_index]
+            gates[curr_gate].max_delay = gates[curr_gate].delays[max_index]
 
             for fan_outs in gates[curr_gate].outputs:
                 #print("Curr gate out: ", gates[curr_gate].outp_arrival, gates[curr_gate].max_out_arrival)
@@ -462,7 +497,58 @@ def main ():
                 #print(gates[gate].name, gates[gate].max_out_arrival, gates[gate].inputs, gates[gate].delays, gates[gate].inp_arrival, gates[gate].outp_arrival)
                 if gates[gate].max_out_arrival > circuit_delay:
                     circuit_delay = gates[gate].max_out_arrival
-    
+
     print("Circuit delay: ", circuit_delay * pow(10, 3), "picoseconds")
 
+    gate_back_queue = []
+
+    initialize_back(gate_back_queue, circuit_delay)
+
+
+    print(gate_back_queue)
+
+    while gate_back_queue:
+        print(gate_back_queue)
+        curr_gate = gate_back_queue.pop(0)
+
+        #print(gates[curr_gate].max_delay)
+
+        #print(curr_gate, gates[curr_gate].inputs)
+        #print(gates['19'].max_out_arrival)
+        for fan_ins in gates[curr_gate].inputs:
+            #print(curr_gate, gates[curr_gate].inputs)
+            if (gates[fan_ins].inputs[0] != "PRIME_IN"):
+                print(curr_gate, fan_ins)
+                check_marked_back(fan_ins)
+                
+                queue_insertion_check_back (gate_back_queue, fan_ins)
+                print(gates[curr_gate].inputs, gates[curr_gate].delays)
+                index = gates[curr_gate].inputs.index(fan_ins)
+                gates[fan_ins].all_rat.append(gates[curr_gate].rat - gates[curr_gate].delays[index])
+                gates[fan_ins].rat = min(gates[fan_ins].all_rat)
+                print(fan_ins, gates[fan_ins].rat)
+
+            else:
+                #print(curr_gate, fan_ins)
+                index = gates[curr_gate].inputs.index(fan_ins)
+                #print("fanin rat:", gates[fan_ins].rat)
+                #print("curr rat", gates[curr_gate].rat)
+                if (gates[fan_ins].rat > (gates[curr_gate].rat - gates[curr_gate].delays[index])):
+                    gates[fan_ins].rat = (gates[curr_gate].rat - gates[curr_gate].delays[index])
+                   # print("new rat", gates[fan_ins].rat)
+
+                #print(curr_gate, fan_ins)
+                
+        
+        # print(curr_gate, gates[curr_gate].all_rat)
+
+        #print(gates[gate].rat)
+        
+
+    for gate in gates:
+        print(gate, gates[gate].rat)
+    #     print(gate, gates[gate].inputs, gates[gate].max_out_arrival)
+    #     #print(gate, gates[gate].max_delay)
+            
 main()
+
