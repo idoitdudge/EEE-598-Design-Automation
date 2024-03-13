@@ -1,6 +1,15 @@
-This folder consists of all the files relating to Project 1: Developing a topological traversal algorithm to perform Static Timing Analysis for circuits <br />
+# Static Timing Analysis Topological Traversal Project
+This folder consists of all the files relating to Project 1: Developing a topological traversal algorithm to perform Static Timing Analysis for circuits. 
 
-# Requirements
+## About This Project
+This project utilizes topological traversal to perform static timing analysis on various different bench files and look-up tables. To find the various timing elements of each gate, we perform 2D bilinear interpolation in order to find the values that are not listed in the LUT.
+
+### Files
+This project consists of 3 major files. The commands to use each file is listed below.
+The first file is ***requirements.txt***, where the required files to run this repository is listed within.
+The second file is ***parser.py***, which lists out the circuit details, delay, and slew details of the LUT.
+The third file is ***main_sta.py***, which contains the main functionalities of the STA traversal function.
+#### Requirements
 Requirements.txt contains the dependencies needed to run the program. To load all of them, use the command:
 ```
 
@@ -8,7 +17,7 @@ pip3 install -r requirements.txt
 
 ```
 
-## Commands
+##### Commands
 
 To use the parser, run the command to get circuit information:
 ```
@@ -31,60 +40,12 @@ python3.7 parser.py --slews --read_nldm sample_NLDM.lib
 
 ```
 
-To get circuit delay, critical path, and slack values, run command for c17 bench:
+To un the main program to perform Static Timing Analysis, run the following command:
 ```
 
-python3.7 main_sta.py --read_ckt c17.bench --read_nldm sample_NLDM.lib
-
-```
-
-To get circuit delay, critical path, and slack values, run command for c432 bench:
-```
-
-python3.7 main_sta.py --read_ckt c432.bench --read_nldm sample_NLDM.lib
+python3.7 main_sta.py --read_ckt file_name.bench --read_nldm sample_NLDM.lib
 
 ```
 
 
-To get circuit delay, critical path, and slack values, run command for c6288 bench:
-```
 
-python3.7 main_sta.py --read_ckt c6288.bench --read_nldm sample_NLDM.lib
-
-```
-
-
-To get circuit delay, critical path, and slack values, run command for c7522 bench:
-```
-
-python3.7 main_sta.py --read_ckt c7522.bench --read_nldm sample_NLDM.lib
-
-```
-
-
-To get circuit delay, critical path, and slack values, run command for b01_C bench:
-```
-
-python3.7 main_sta.py --read_ckt b01_C.bench --read_nldm sample_NLDM.lib
-
-```
-
-
-To get circuit delay, critical path, and slack values, run command for b02_C bench:
-```
-
-python3.7 main_sta.py --read_ckt b02_C.bench --read_nldm sample_NLDM.lib
-
-```
-
-To get circuit delay, critical path, and slack values, run command for b15_C bench:
-```
-python3.7 main_sta.py --read_ckt b15_C.bench --read_nldm sample_NLDM.lib
-
-```
-
-To get circuit delay, critical path, and slack values, run command for b20_C bench:
-```
-python3.7 main_sta.py --read_ckt b20_C.bench --read_nldm sample_NLDM.lib
-
-```
